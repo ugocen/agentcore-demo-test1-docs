@@ -487,6 +487,26 @@ If workflow starts but no activity executes: check the `temporal-worker` contain
 - `agentcore-demo-test1-frontend/lib/auth/mockAuth.ts`
 - `agentcore-demo-test1-frontend/Dockerfile`
 
+> **Substitutions in the as-built codebase (2026-05-17).** The Round 2/3
+> remediation kept the architecture but used clearer names in a couple of
+> places. Treat the table below as authoritative when reading the code:
+>
+> | Planned filename | As-built filename | Notes |
+> |---|---|---|
+> | `components/canvas/BrdPreview.tsx` | `components/canvas/DraftPreviewCard.tsx` | Same role (Markdown BRD preview + download). |
+> | `components/canvas/ReviewPanel.tsx` | `components/canvas/ReviewReportCard.tsx` | Same role (renders reviewer's structured findings). |
+> | `components/canvas/TranscriptCard.tsx` | same | (added; not in the original list but needed by `GenerativeUIRenderer`). |
+> | `components/canvas/CanvasPanel.tsx` | same | AG-UI event-stream pane in the status column. |
+> | `components/canvas/GenerativeUIRenderer.tsx` | same | Orchestrates which card to render. |
+> | `components/hitl/ClarificationCard.tsx` | same (symbol renamed from `ClarificationQuestionCard`). |
+> | `components/hitl/ApprovalCard.tsx` | same |
+> | `hooks/useAgent.ts` | (not created) | Workspace uses `useCoAgent` from `@copilotkit/react-core` directly. |
+> | `hooks/useWorkflowStream.ts` | same |
+> | `lib/api/workflows.ts` | same | Exports `listWorkflows`, `startWorkflow`. Approval/clarification signals stay in `AgentCoreHttpAgent`. |
+> | `lib/api/uploads.ts` | same | Consumed by `components/chat/AudioInput/AudioInput.tsx`. |
+> | `lib/auth/mockAuth.ts` | `lib/auth/personas.ts` | Holds the persona list shown by the landing-page selector; mirrors backend `MOCK_PERSONAS`. |
+> | `components/CopilotKitProvider.tsx` / `CopilotSidebarWrapper.tsx` | deleted | Provider lives directly in `app/workspace/[wfId]/layout.tsx`. |
+
 **Dependencies:** Phase 4.
 
 **Checkpoint Markers:**

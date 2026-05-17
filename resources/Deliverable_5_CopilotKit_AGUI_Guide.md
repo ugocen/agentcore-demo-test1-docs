@@ -660,6 +660,59 @@ export class AgentCoreHttpAgent extends HttpAgent {
   }
 
   // =========================================================================
+  // As-built pattern (2026-05-17): per-request CopilotRuntime + header forwarding
+  // =========================================================================
+  //
+  // The reference implementation above shows the AG-UI client wiring up the
+  // session id on every direct fetch. The CopilotKit runtime route used in
+  // this demo (`app/api/copilotkit/route.ts`) cannot reuse the same
+  // approach because `CopilotRuntime({ agents: { ... } })` accepts only a
+  // STATIC `HttpAgent` per agent — its `headers` object is captured at
+  // construction time. To still get per-workflow session isolation, the
+  // route builds a fresh `CopilotRuntime` on every POST and reads the
+  // workflow id from a custom header set by the React provider:
+  //
+  //     // app/workspace/[wfId]/layout.tsx
+  //     <CopilotKit
+  //       runtimeUrl={COPILOT_CONFIG.runtimeUrl}
+  //       agent={COPILOT_CONFIG.agentName}
+  //       headers={{ 'x-workflow-id': wfId }}
+  //     >...</CopilotKit>
+  //
+  //     // app/api/copilotkit/route.ts
+  //     export const POST = async (req: NextRequest) => {
+  //       const wf = req.headers.get('x-workflow-id') || '';
+  //       // AgentCore requires runtimeSessionId of length >= 33; pad short ids
+  //       // (used by the synthetic /workspace/new bootstrap, where wf === 'new').
+  //       const sessionId = wf.length >= 33 ? wf
+  //         : `fallback-session-${wf || crypto.randomUUID()}`.padEnd(33, '0');
+  //       const runtime = new CopilotRuntime({
+  //         agents: {
+  //           strands_transcriber: new HttpAgent({
+  //             url: process.env.AGENT_1_RUNTIME_URL!,
+  //             headers: { 'X-Amzn-Bedrock-AgentCore-Runtime-Session-Id': sessionId },
+  //           }),
+  //           // ... drafter + reviewer ...
+  //         },
+  //       });
+  //       const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+  //         runtime, serviceAdapter: new ExperimentalEmptyAdapter(),
+  //         endpoint: '/api/copilotkit',
+  //       });
+  //       return handleRequest(req);
+  //     };
+  //
+  // Net effect: each `/api/copilotkit` request that originates from inside
+  // a `/workspace/[wfId]` page lands on the AgentCore microVM bound to that
+  // workflow id. Requests from outside a workspace (no header) fall back to
+  // a generated id so the chat at least loads instead of throwing.
+  //
+  // Also at module load the route logs a `console.warn` if any of
+  // `AGENT_1/2/3_RUNTIME_URL` is empty — `HttpAgent` silently accepts an
+  // empty URL and the failure would otherwise only appear deep inside a
+  // CopilotKit fetch with no clear cause.
+
+  // =========================================================================
   // Event Stream Access
   // Override to intercept events for local distribution and logging
   // =========================================================================
